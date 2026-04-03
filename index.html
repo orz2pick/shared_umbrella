@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Umbrella Sharing Charity</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="location-badge">Fuzhou</div>
+    <div class="umbrella-animation">
+        <img src="umbrella.png" alt="Floating Umbrella">
+    </div>
+    <div class="donation-tabs">
+        <button class="tab-button" onclick="showSection('wechat')">WeChat Donation</button>
+        <button class="tab-button" onclick="showSection('alipay')">Alipay Donation</button>
+        <button class="tab-button" onclick="showSection('umbrella')">Umbrella Donation</button>
+    </div>
+    <div id="support-sections">
+        <div id="wechat" class="tab-content">WeChat Donation Details...</div>
+        <div id="alipay" class="tab-content" style="display:none;">Alipay Donation Details...</div>
+        <div id="umbrella" class="tab-content" style="display:none;">Umbrella Donation Details...</div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
