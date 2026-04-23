@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>福州首个共享雨伞 | Fuzhou Umbrella Share</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>福州共享雨伞 · 分形闪电</title>
     <style>
         * {
             margin: 0;
@@ -19,28 +19,35 @@
             position: relative;
         }
 
-        .rain-container {
+        /* 画布雨效 + 闪电绘制 (闪电直接画在canvas上) */
+        #rainCanvas {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: 0;
-            overflow: hidden;
+            z-index: 5;
+            display: block;
         }
 
-        .raindrop {
-            position: absolute;
-            width: 2px;
-            height: 20px;
-            background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.6));
-            animation: fall linear infinite;
-            border-radius: 2px;
+        /* 闪光层保留 (全屏泛白) */
+        .lightning-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.95) 0%, rgba(200,220,255,0.4) 30%, transparent 70%);
+            transition: opacity 0.1s;
         }
 
-        @keyframes fall {
-            to { transform: translateY(100vh); }
+        /* 隐藏原有div闪电，改用canvas绘制分形闪电 */
+        .lightning-bolt {
+            display: none;
         }
 
         .lang-switcher {
@@ -69,13 +76,9 @@
             color: #667eea;
         }
 
-        .lang-btn:hover {
-            background: rgba(255,255,255,0.4);
-        }
-
         .container {
             position: relative;
-            z-index: 10;
+            z-index: 20;
             max-width: 800px;
             margin: 0 auto;
             padding: 40px 20px;
@@ -144,6 +147,8 @@
             margin-bottom: 30px;
             transform: translateY(0);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            z-index: 15;
         }
 
         .info-card:hover {
@@ -178,17 +183,13 @@
             transition: transform 0.3s ease;
         }
 
-        .stat-item:hover {
-            transform: scale(1.05);
-        }
-
         .stat-number {
             font-size: 2.5em;
             font-weight: 700;
             background: linear-gradient(135deg, #667eea, #764ba2);
             -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
             background-clip: text;
+            color: transparent;
         }
 
         .stat-label {
@@ -239,11 +240,6 @@
             border-color: transparent;
         }
 
-        .tab-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-
         .support-content {
             display: none;
             animation: fadeIn 0.4s ease;
@@ -266,6 +262,8 @@
             width: 100%;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             text-align: center;
+            position: relative;
+            z-index: 15;
         }
 
         .support-title {
@@ -278,28 +276,12 @@
             gap: 10px;
         }
 
-        .support-text {
-            color: #666;
-            line-height: 1.8;
-            margin-bottom: 30px;
-            font-size: 1.05em;
-        }
-
         .qr-container {
             display: flex;
             justify-content: center;
             gap: 40px;
             flex-wrap: wrap;
             margin: 30px 0;
-        }
-
-        .qr-item {
-            text-align: center;
-            transition: transform 0.3s ease;
-        }
-
-        .qr-item:hover {
-            transform: translateY(-10px);
         }
 
         .qr-placeholder {
@@ -317,195 +299,65 @@
             overflow: hidden;
         }
 
-        .qr-placeholder::before {
-            content: "";
-            position: absolute;
-            width: 60%;
-            height: 60%;
-            background: repeating-linear-gradient(0deg, #333 0px, #333 4px, transparent 4px, transparent 8px),
-            repeating-linear-gradient(90deg, #333 0px, #333 4px, transparent 4px, transparent 8px);
-            opacity: 0.1;
-        }
+        .qr-icon { font-size: 3em; margin-bottom: 10px; }
+        .qr-label { color: #888; font-size: 0.9em; }
 
-        .qr-icon {
-            font-size: 3em;
-            margin-bottom: 10px;
-        }
-
-        .qr-label {
-            color: #888;
-            font-size: 0.9em;
-        }
-
-        .qr-item p {
-            color: #333;
-            font-weight: 600;
-            font-size: 1.1em;
-        }
-
-        .donate-umbrella-section {
-            text-align: left;
-        }
-
-        .donate-steps {
-            display: grid;
-            gap: 20px;
-            margin: 30px 0;
-        }
-
+        .donate-steps { display: grid; gap: 20px; margin: 30px 0; }
         .step-card {
-            display: flex;
-            align-items: flex-start;
-            gap: 20px;
-            padding: 25px;
+            display: flex; align-items: flex-start; gap: 20px; padding: 25px;
             background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
-            border-radius: 16px;
-            border-left: 4px solid #667eea;
-            transition: all 0.3s ease;
+            border-radius: 16px; border-left: 4px solid #667eea;
         }
-
-        .step-card:hover {
-            transform: translateX(5px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2);
-        }
-
         .step-number {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1.2em;
-            flex-shrink: 0;
+            width: 40px; height: 40px; background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 1.2em; flex-shrink: 0;
         }
-
-        .step-content h4 {
-            color: #333;
-            margin-bottom: 8px;
-            font-size: 1.1em;
-        }
-
-        .step-content p {
-            color: #666;
-            line-height: 1.6;
-            font-size: 0.95em;
-        }
-
         .donate-location {
             background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
-            border: 2px dashed #667eea;
-            border-radius: 16px;
-            padding: 25px;
-            margin-top: 25px;
-            text-align: center;
+            border: 2px dashed #667eea; border-radius: 16px; padding: 25px; margin-top: 25px;
         }
-
-        .donate-location h4 {
-            color: #667eea;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .location-detail {
-            color: #555;
-            font-size: 1.1em;
-            font-weight: 600;
-        }
-
-        .location-note {
-            color: #888;
-            font-size: 0.9em;
-            margin-top: 8px;
-        }
-
         .btn-primary {
-            display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px 40px;
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 1.1em;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-            margin-top: 10px;
+            display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; padding: 15px 40px; border-radius: 50px; border: none;
+            font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102,126,234,0.4);
         }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
-
         .btn-secondary {
-            display: inline-block;
-            background: white;
-            color: #667eea;
-            padding: 12px 30px;
-            border-radius: 50px;
-            border: 2px solid #667eea;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            margin-top: 15px;
+            display: inline-block; background: white; color: #667eea; padding: 12px 30px;
+            border-radius: 50px; border: 2px solid #667eea; cursor: pointer; font-weight: 600;
         }
-
-        .btn-secondary:hover {
-            background: #667eea;
-            color: white;
-        }
-
         footer {
-            margin-top: 40px;
-            color: rgba(255,255,255,0.8);
-            text-align: center;
-            font-size: 0.9em;
+            margin-top: 40px; color: rgba(255,255,255,0.8); text-align: center; font-size: 0.9em;
+            position: relative; z-index: 15;
         }
-
-        .heart {
-            color: #ff6b6b;
-            display: inline-block;
-            animation: heartbeat 1.5s ease-in-out infinite;
-        }
-
+        .heart { color: #ff6b6b; animation: heartbeat 1.5s infinite; }
         @keyframes heartbeat {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2); }
+            0%,100%{transform:scale(1);} 50%{transform:scale(1.2);}
         }
 
         @media (max-width: 600px) {
             h1 { font-size: 1.8em; }
             .info-card, .support-section { padding: 25px; }
-            .qr-container { gap: 20px; }
-            .qr-placeholder { width: 150px; height: 150px; }
-            .step-card { flex-direction: column; text-align: center; }
-            .support-tabs { flex-direction: column; width: 100%; }
-            .tab-btn { width: 100%; }
-            .lang-switcher { top: 10px; right: 10px; }
-            .lang-btn { padding: 6px 12px; font-size: 0.9em; }
         }
     </style>
 </head>
 <body>
+    <!-- 闪光层 (全屏泛白) -->
+    <div class="lightning-flash" id="lightningFlash"></div>
+    <!-- 原div闪电隐藏，现在用canvas绘制⚡分形 -->
+    <div class="lightning-bolt" id="lightningBolt"></div>
+
+    <!-- 画布：雨滴 + 分形闪电 + 卡片水流 -->
+    <canvas id="rainCanvas"></canvas>
+
     <div class="lang-switcher">
         <button class="lang-btn active" onclick="switchLang('zh')" data-lang="zh">中文</button>
         <button class="lang-btn" onclick="switchLang('en')" data-lang="en">EN</button>
         <button class="lang-btn" onclick="switchLang('ko')" data-lang="ko">한국어</button>
     </div>
 
-    <div class="rain-container" id="rainContainer"></div>
-
     <div class="container">
-        <svg class="umbrella-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg class="umbrella-icon" viewBox="0 0 100 100" fill="none">
             <path d="M50 15 C30 15 15 30 12 45 C12 45 20 40 30 40 C40 40 45 45 50 45 C55 45 60 40 70 40 C80 40 88 45 88 45 C85 30 70 15 50 15 Z" fill="#FFD93D" stroke="#FFA500" stroke-width="2"/>
             <path d="M50 45 L50 75" stroke="#666" stroke-width="4" stroke-linecap="round"/>
             <path d="M50 75 C50 85 45 90 40 90" stroke="#666" stroke-width="4" stroke-linecap="round" fill="none"/>
@@ -518,7 +370,7 @@
             <p class="subtitle" data-i18n="subtitle">软件园 · 暖心计划</p>
         </header>
 
-        <section class="info-card">
+        <section class="info-card" id="infoCard">
             <div class="location-tag">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -526,283 +378,455 @@
                 </svg>
                 <span data-i18n="location">福州软件园</span>
             </div>
-
             <div class="stats">
-                <div class="stat-item">
-                    <div class="stat-number">10</div>
-                    <div class="stat-label" data-i18n="stat1">首批雨伞</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-number">1</div>
-                    <div class="stat-label" data-i18n="stat2">位发起人</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-number">∞</div>
-                    <div class="stat-label" data-i18n="stat3">份温暖</div>
-                </div>
+                <div class="stat-item"><div class="stat-number">10</div><div class="stat-label" data-i18n="stat1">首批雨伞</div></div>
+                <div class="stat-item"><div class="stat-number">1</div><div class="stat-label" data-i18n="stat2">位发起人</div></div>
+                <div class="stat-item"><div class="stat-number">∞</div><div class="stat-label" data-i18n="stat3">份温暖</div></div>
             </div>
-
-            <p class="description" data-i18n="description">
-                这是一个纯个人发起的公益项目，<span class="highlight">首批10把雨伞</span>全部由up主个人承担费用，放置在福州软件园公共区域。希望在突如其来的雨天，能为园区里的开发者、创业者、上班族提供一份便利。<br><br>
-                雨伞采用<span class="highlight">无押金、免扫码</span>的共享模式，凭自觉借还。如果您使用过雨伞，请在方便时归还到原处，让这份温暖继续传递。
-            </p>
+            <p class="description" data-i18n="description">这是一个纯个人发起的公益项目，<span class="highlight">首批10把雨伞</span>全部由up主个人承担费用，放置在福州软件园公共区域。希望在突如其来的雨天，能为园区里的开发者、创业者、上班族提供一份便利。<br><br>雨伞采用<span class="highlight">无押金、免扫码</span>的共享模式，凭自觉借还。如果您使用过雨伞，请在方便时归还到原处，让这份温暖继续传递。</p>
         </section>
 
         <section class="support-section">
-            <h2 class="support-title">
-                <span>💝</span>
-                <span data-i18n="supportTitle">支持本项目</span>
-            </h2>
+            <h2 class="support-title"><span>💝</span><span data-i18n="supportTitle">支持本项目</span></h2>
             <p class="support-text" data-i18n="supportDesc">如果您觉得在雨天被支持到了，或者想给这个项目添砖加瓦，可以通过以下两种方式参与：</p>
-
             <div class="support-tabs">
                 <button class="tab-btn active" onclick="switchTab('donate', this)" data-i18n="tabDonate">💰 打赏UP主</button>
                 <button class="tab-btn" onclick="switchTab('umbrella', this)" data-i18n="tabUmbrella">☔ 捐赠雨伞</button>
             </div>
-
             <div id="donate" class="support-content active">
-                <p style="color: #666; margin-bottom: 25px;" data-i18n="donateDesc">您的打赏将用于扩充雨伞数量、增设站点和维护项目运营</p>
+                <p style="color:#666;margin-bottom:25px;" data-i18n="donateDesc">您的打赏将用于扩充雨伞数量、增设站点和维护项目运营</p>
                 <div class="qr-container">
-                    <div class="qr-item">
-                        <div class="qr-placeholder">
-                            <div class="qr-icon">📱</div>
-                            <span class="qr-label" data-i18n="qrWechat">请放置微信收款码</span>
-                        </div>
-                        <p data-i18n="wechat">微信支付</p>
-                    </div>
-                    <div class="qr-item">
-                        <div class="qr-placeholder">
-                            <div class="qr-icon">💰</div>
-                            <span class="qr-label" data-i18n="qrAlipay">请放置支付宝收款码</span>
-                        </div>
-                        <p data-i18n="alipay">支付宝</p>
-                    </div>
+                    <div class="qr-item"><div class="qr-placeholder"><div class="qr-icon">📱</div><span class="qr-label" data-i18n="qrWechat">请放置微信收款码</span></div><p data-i18n="wechat">微信支付</p></div>
+                    <div class="qr-item"><div class="qr-placeholder"><div class="qr-icon">💰</div><span class="qr-label" data-i18n="qrAlipay">请放置支付宝收款码</span></div><p data-i18n="alipay">支付宝</p></div>
                 </div>
                 <button class="btn-primary" onclick="showThanks('donate')" data-i18n="btnThanks">已支持，感谢！</button>
             </div>
-
             <div id="umbrella" class="support-content">
                 <div class="donate-umbrella-section">
-                    <p style="color: #666; margin-bottom: 25px; text-align: center;" data-i18n="umbrellaDesc">您可以将闲置的雨伞捐赠到共享雨伞篮子，让爱心传递</p>
-                    
+                    <p style="color:#666;margin-bottom:25px;" data-i18n="umbrellaDesc">您可以将闲置的雨伞捐赠到共享雨伞篮子，让爱心传递</p>
                     <div class="donate-steps">
-                        <div class="step-card">
-                            <div class="step-number">1</div>
-                            <div class="step-content">
-                                <h4 data-i18n="step1Title">📦 准备雨伞</h4>
-                                <p data-i18n="step1Desc">整理您家中闲置的雨伞，确保伞骨完好、能正常使用。新旧不限，只要能为他人遮雨即可。</p>
-                            </div>
-                        </div>
-                        <div class="step-card">
-                            <div class="step-number">2</div>
-                            <div class="step-content">
-                                <h4 data-i18n="step2Title">📝 贴上标签</h4>
-                                <p data-i18n="step2Desc">建议在伞柄处贴上小标签，注明"共享雨伞"字样，方便使用者识别。</p>
-                            </div>
-                        </div>
-                        <div class="step-card">
-                            <div class="step-number">3</div>
-                            <div class="step-content">
-                                <h4 data-i18n="step3Title">🧺 放入篮子</h4>
-                                <p data-i18n="step3Desc">将雨伞直接放入软件园共享雨伞篮子里即可。无需登记，随放随走。</p>
-                            </div>
-                        </div>
+                        <div class="step-card"><div class="step-number">1</div><div class="step-content"><h4 data-i18n="step1Title">📦 准备雨伞</h4><p data-i18n="step1Desc">整理您家中闲置的雨伞，确保伞骨完好、能正常使用。</p></div></div>
+                        <div class="step-card"><div class="step-number">2</div><div class="step-content"><h4 data-i18n="step2Title">📝 贴上标签</h4><p data-i18n="step2Desc">建议在伞柄处贴上小标签，注明"共享雨伞"字样。</p></div></div>
+                        <div class="step-card"><div class="step-number">3</div><div class="step-content"><h4 data-i18n="step3Title">🧺 放入篮子</h4><p data-i18n="step3Desc">将雨伞直接放入软件园共享雨伞篮子里即可。</p></div></div>
                     </div>
-
                     <div class="donate-location">
-                        <h4>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                <circle cx="12" cy="10" r="3"></circle>
-                            </svg>
-                            <span data-i18n="donateLocTitle">捐赠地点</span>
-                        </h4>
+                        <h4><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg><span data-i18n="donateLocTitle">捐赠地点</span></h4>
                         <p class="location-detail" data-i18n="donateLocDetail">福州软件园 · 共享雨伞篮子</p>
                         <p class="location-note" data-i18n="donateLocNote">（具体位置请参考现场指示牌或咨询园区物业）</p>
                     </div>
-
-                    <div style="text-align: center; margin-top: 25px;">
-                        <button class="btn-secondary" onclick="showThanks('umbrella')" data-i18n="btnDonate">我会去捐赠雨伞！</button>
-                    </div>
+                    <div style="text-align:center;margin-top:25px;"><button class="btn-secondary" onclick="showThanks('umbrella')" data-i18n="btnDonate">我会去捐赠雨伞！</button></div>
                 </div>
             </div>
         </section>
 
         <footer>
             <p>Made with <span class="heart">❤</span> <span data-i18n="footer1">in Fuzhou Software Park. Contact chanlung_math@qq.com</span></p>
-            <p style="margin-top: 10px; opacity: 0.7;" data-i18n="footer2">让雨天不再狼狈 · 让城市更有温度</p>
+            <p style="margin-top:10px;opacity:0.7;" data-i18n="footer2">让雨天不再狼狈 · 让城市更有温度</p>
         </footer>
     </div>
 
     <script>
-        const i18n = {
-            zh: {
-                badge: "🎉 恭喜你发现了",
-                title: "福州首个共享雨伞项目",
-                subtitle: "软件园 · 暖心计划",
-                location: "福州软件园",
-                stat1: "首批雨伞",
-                stat2: "位发起人",
-                stat3: "份温暖",
-                description: '这是一个纯个人发起的公益项目，<span class="highlight">首批10把雨伞</span>全部由up主个人承担费用，放置在福州软件园公共区域。希望在突如其来的雨天，能为园区里的开发者、创业者、上班族提供一份便利。<br><br>雨伞采用<span class="highlight">无押金、免扫码</span>的共享模式，凭自觉借还。如果您使用过雨伞，请在方便时归还到原处，让这份温暖继续传递。',
-                supportTitle: "支持本项目",
-                supportDesc: "如果您觉得在雨天被支持到了，或者想给这个项目添砖加瓦，可以通过以下两种方式参与：",
-                tabDonate: "💰 打赏UP主",
-                tabUmbrella: "☔ 捐赠雨伞",
-                donateDesc: "您的打赏将用于扩充雨伞数量、增设站点和维护项目运营",
-                qrWechat: "请放置微信收款码",
-                qrAlipay: "请放置支付宝收款码",
-                wechat: "微信支付",
-                alipay: "支付宝",
-                btnThanks: "已支持，感谢！",
-                umbrellaDesc: "您可以将闲置的雨伞捐赠到共享雨伞篮子，让爱心传递",
-                step1Title: "📦 准备雨伞",
-                step1Desc: "整理您家中闲置的雨伞，确保伞骨完好、能正常使用。新旧不限，只要能为他人遮雨即可。",
-                step2Title: "📝 贴上标签",
-                step2Desc: "建议在伞柄处贴上小标签，注明\"共享雨伞\"字样，方便使用者识别。",
-                step3Title: "🧺 放入篮子",
-                step3Desc: "将雨伞直接放入软件园共享雨伞篮子里即可。无需登记，随放随走。",
-                donateLocTitle: "捐赠地点",
-                donateLocDetail: "福州软件园 · 共享雨伞篮子",
-                donateLocNote: "（具体位置请参考现场指示牌或咨询园区物业）",
-                btnDonate: "我会去捐赠雨伞！",
-                footer1: "in Fuzhou Software Park，Contact chanlung_math@qq.com",
-                footer2: "让雨天不再狼狈 · 让城市更有温度",
-                thanksDonate: ["感谢您的打赏！雨伞家族会因您而壮大 ☔", "谢谢您的支持！这份温暖将传递给更多人 🌧️", "收到您的心意！下次雨天见 💙"],
-                thanksUmbrella: ["感谢您的爱心捐赠！这把伞将为他人遮风挡雨 ☂️", "谢谢您的善举！闲置雨伞变废为宝 💚", "您的捐赠让这个项目更有意义！ 🌈"]
-            },
-            en: {
-                badge: "🎉 You Found It",
-                title: "Fuzhou's First Umbrella Sharing Project",
-                subtitle: "Software Park · Warm Heart Plan",
-                location: "Fuzhou Software Park",
-                stat1: "First Batch",
-                stat2: "Founder",
-                stat3: "Warmth",
-                description: 'This is a personal charity project. <span class="highlight">The first 10 umbrellas</span> are fully funded by the creator and placed in public areas of Fuzhou Software Park. We hope to provide convenience for developers, entrepreneurs, and office workers on rainy days.<br><br>Umbrellas use a <span class="highlight">no-deposit, no-scan</span> sharing model based on trust. Please return to the original location after use.',
-                supportTitle: "Support This Project",
-                supportDesc: "If this project helped you on a rainy day, or you want to contribute, here are two ways to participate:",
-                tabDonate: "💰 Tip the Creator",
-                tabUmbrella: "☔ Donate Umbrella",
-                donateDesc: "Your tips will be used to expand umbrella inventory and add more stations",
-                qrWechat: "Place WeChat QR Code",
-                qrAlipay: "Place Alipay QR Code",
-                wechat: "WeChat Pay",
-                alipay: "Alipay",
-                btnThanks: "Thanks for Support!",
-                umbrellaDesc: "Donate your idle umbrellas to the sharing basket and spread the love",
-                step1Title: "📦 Prepare Umbrella",
-                step1Desc: "Find idle umbrellas at home. Ensure they work properly. Any condition accepted as long as it keeps rain off.",
-                step2Title: "📝 Add Label",
-                step2Desc: "Attach a small label on the handle with \"Shared Umbrella\" for easy identification.",
-                step3Title: "🧺 Drop in Basket",
-                step3Desc: "Simply place the umbrella in the Software Park sharing basket. No registration needed.",
-                donateLocTitle: "Donation Location",
-                donateLocDetail: "Fuzhou Software Park · Umbrella Sharing Basket",
-                donateLocNote: "(Check on-site signs or consult park management for exact location)",
-                btnDonate: "I will donate an umbrella!",
-                footer1: "in Fuzhou Software Park",
-                footer2: "No more狼狈in rain · A warmer city",
-                thanksDonate: ["Thanks for your tip! The umbrella family grows ☔", "Thank you! This warmth will spread 🌧️", "Received! See you next rainy day 💙"],
-                thanksUmbrella: ["Thanks for your donation! This umbrella will shelter others ☂️", "Thank you for your kindness! Idle umbrella reused 💚", "Your donation makes this project meaningful! 🌈"]
-            },
-            ko: {
-                badge: "🎉 발견을 축하합니다",
-                title: "푸저우 최초 공유 우산 프로젝트",
-                subtitle: "소프트웨어 파크 · 따뜻한 마음 계획",
-                location: "푸저우 소프트웨어 파크",
-                stat1: "첫 번째 배치",
-                stat2: "창립자",
-                stat3: "따뜻함",
-                description: '이것은 순수한 개인 자선 프로젝트입니다. <span class="highlight">첫 10개의 우산</span>은 제작자가 전액 출자하여 푸저우 소프트웨어 파크 공공 구역에 배치되었습니다. 갑작스러운 비 오는 날 개발자, 창업가, 직장인들에게 편의를 제공하고자 합니다.<br><br>우산은 <span class="highlight">보증금 없음, 스캔 없음</span> 신뢰 기반 공유 모델을 사용합니다. 사용 후 원래 위치에 반납해 주세요.',
-                supportTitle: "프로젝트 지원",
-                supportDesc: "비 오는 날 도움이 되셨거나 이 프로젝트에 기여하고 싶으시다면, 다음 두 가지 방법으로 참여하실 수 있습니다:",
-                tabDonate: "💰 제작자 후원",
-                tabUmbrella: "☔ 우산 기부",
-                donateDesc: "후원금은 우산 재고 확대와 추가 스테이션 설치에 사용됩니다",
-                qrWechat: "위챗 QR 코드 배치",
-                qrAlipay: "알리페이 QR 코드 배치",
-                wechat: "위챗 페이",
-                alipay: "알리페이",
-                btnThanks: "후원 감사합니다!",
-                umbrellaDesc: "유휴 우산을 공유 바구니에 기부하여 사랑을 전하세요",
-                step1Title: "📦 우산 준비",
-                step1Desc: "집에서 유휴 우산을 찾으세요. 정상 작동하는지 확인하세요. 비를 막을 수 있다면 어떤 상태든 가능합니다.",
-                step2Title: "📝 라벨 부착",
-                step2Desc: "손잡이에 \"공유 우산\"이라는 작은 라벨을 붙여 쉽게 식별할 수 있게 해주세요.",
-                step3Title: "🧺 바구니에 넣기",
-                step3Desc: "소프트웨어 파크 공유 바구니에 우산을 넣기만 하면 됩니다. 등록이 필요 없습니다.",
-                donateLocTitle: "기부 장소",
-                donateLocDetail: "푸저우 소프트웨어 파크 · 공유 우산 바구니",
-                donateLocNote: "(정확한 위치는 현장 표지판을 확인하거나 파크 관리실에 문의하세요)",
-                btnDonate: "우산 기부하겠습니다!",
-                footer1: "in Fuzhou Software Park",
-                footer2: "비 오는 날 당황하지 마세요 · 더 따뜻한 도시",
-                thanksDonate: ["후원해 주셔서 감사합니다! 우산 가족이 커집니다 ☔", "감사합니다! 이 따뜻함이 전해집니다 🌧️", "마음 받았습니다! 다음 비 오는 날 뵙겠습니다 💙"],
-                thanksUmbrella: ["우산 기부 감사합니다! 이 우산이 다른 사람을 보호합니다 ☂️", "선행에 감사드립니다! 유휴 우산이 재사용됩니다 💚", "기부로 이 프로젝트에 의미를 더해주셨습니다! 🌈"]
-            }
-        };
+        (function(){
+            "use strict";
 
-        let currentLang = 'zh';
+            // ---------- 国际化 ----------
+            const i18n = {
+                zh: {
+                    badge: "🎉 恭喜你发现了", title: "福州首个共享雨伞项目", subtitle: "软件园 · 暖心计划",
+                    location: "福州软件园", stat1: "首批雨伞", stat2: "位发起人", stat3: "份温暖",
+                    description: '这是一个纯个人发起的公益项目，<span class="highlight">首批10把雨伞</span>全部由up主个人承担费用，放置在福州软件园公共区域。希望在突如其来的雨天，能为园区里的开发者、创业者、上班族提供一份便利。<br><br>雨伞采用<span class="highlight">无押金、免扫码</span>的共享模式，凭自觉借还。如果您使用过雨伞，请在方便时归还到原处，让这份温暖继续传递。',
+                    supportTitle: "支持本项目", supportDesc: "如果您觉得在雨天被支持到了，或者想给这个项目添砖加瓦，可以通过以下两种方式参与：",
+                    tabDonate: "💰 打赏UP主", tabUmbrella: "☔ 捐赠雨伞", donateDesc: "您的打赏将用于扩充雨伞数量、增设站点和维护项目运营",
+                    qrWechat: "请放置微信收款码", qrAlipay: "请放置支付宝收款码", wechat: "微信支付", alipay: "支付宝", btnThanks: "已支持，感谢！",
+                    umbrellaDesc: "您可以将闲置的雨伞捐赠到共享雨伞篮子，让爱心传递",
+                    step1Title:"📦 准备雨伞",step1Desc:"整理您家中闲置的雨伞，确保伞骨完好、能正常使用。",
+                    step2Title:"📝 贴上标签",step2Desc:'建议在伞柄处贴上小标签，注明"共享雨伞"字样。',
+                    step3Title:"🧺 放入篮子",step3Desc:"将雨伞直接放入软件园共享雨伞篮子里即可。",
+                    donateLocTitle:"捐赠地点",donateLocDetail:"福州软件园 · 共享雨伞篮子",donateLocNote:"（具体位置请参考现场指示牌或咨询园区物业）",
+                    btnDonate:"我会去捐赠雨伞！", footer1:"in Fuzhou Software Park，Contact chanlung_math@qq.com", footer2:"让雨天不再狼狈 · 让城市更有温度",
+                    thanksDonate:["感谢您的打赏！雨伞家族会因您而壮大 ☔","谢谢您的支持！这份温暖将传递给更多人 🌧️","收到您的心意！下次雨天见 💙"],
+                    thanksUmbrella:["感谢您的爱心捐赠！这把伞将为他人遮风挡雨 ☂️","谢谢您的善举！闲置雨伞变废为宝 💚","您的捐赠让这个项目更有意义！ 🌈"]
+                },
+                en: {
+                    badge:"🎉 You Found It", title:"Fuzhou's First Umbrella Sharing Project", subtitle:"Software Park · Warm Heart Plan",
+                    location:"Fuzhou Software Park", stat1:"First Batch", stat2:"Founder", stat3:"Warmth",
+                    description:'This is a personal charity project. <span class="highlight">The first 10 umbrellas</span> are fully funded by the creator and placed in public areas of Fuzhou Software Park. We hope to provide convenience for developers, entrepreneurs, and office workers on rainy days.<br><br>Umbrellas use a <span class="highlight">no-deposit, no-scan</span> sharing model based on trust. Please return to the original location after use.',
+                    supportTitle:"Support This Project", supportDesc:"If this project helped you on a rainy day, or you want to contribute, here are two ways to participate:",
+                    tabDonate:"💰 Tip the Creator", tabUmbrella:"☔ Donate Umbrella", donateDesc:"Your tips will be used to expand umbrella inventory and add more stations",
+                    qrWechat:"Place WeChat QR Code", qrAlipay:"Place Alipay QR Code", wechat:"WeChat Pay", alipay:"Alipay", btnThanks:"Thanks for Support!",
+                    umbrellaDesc:"Donate your idle umbrellas to the sharing basket and spread the love",
+                    step1Title:"📦 Prepare Umbrella",step1Desc:"Find idle umbrellas at home. Ensure they work properly.",
+                    step2Title:"📝 Add Label",step2Desc:'Attach a small label on the handle with "Shared Umbrella".',
+                    step3Title:"🧺 Drop in Basket",step3Desc:"Simply place the umbrella in the Software Park sharing basket.",
+                    donateLocTitle:"Donation Location",donateLocDetail:"Fuzhou Software Park · Umbrella Sharing Basket",donateLocNote:"(Check on-site signs or consult park management)",
+                    btnDonate:"I will donate an umbrella!", footer1:"in Fuzhou Software Park", footer2:"No more狼狈in rain · A warmer city",
+                    thanksDonate:["Thanks for your tip! ☔","Thank you! This warmth will spread 🌧️","Received! See you next rainy day 💙"],
+                    thanksUmbrella:["Thanks for your donation! ☂️","Thank you for your kindness! 💚","Your donation makes this project meaningful! 🌈"]
+                },
+                ko: {
+                    badge:"🎉 발견을 축하합니다", title:"푸저우 최초 공유 우산 프로젝트", subtitle:"소프트웨어 파크 · 따뜻한 마음 계획",
+                    location:"푸저우 소프트웨어 파크", stat1:"첫 번째 배치", stat2:"창립자", stat3:"따뜻함",
+                    description:'이것은 순수한 개인 자선 프로젝트입니다. <span class="highlight">첫 10개의 우산</span>은 제작자가 전액 출자하여 푸저우 소프트웨어 파크 공공 구역에 배치되었습니다. 갑작스러운 비 오는 날 개발자, 창업가, 직장인들에게 편의를 제공하고자 합니다.<br><br>우산은 <span class="highlight">보증금 없음, 스캔 없음</span> 신뢰 기반 공유 모델을 사용합니다. 사용 후 원래 위치에 반납해 주세요.',
+                    supportTitle:"프로젝트 지원", supportDesc:"비 오는 날 도움이 되셨거나 이 프로젝트에 기여하고 싶으시다면, 다음 두 가지 방법으로 참여하실 수 있습니다:",
+                    tabDonate:"💰 제작자 후원", tabUmbrella:"☔ 우산 기부", donateDesc:"후원금은 우산 재고 확대와 추가 스테이션 설치에 사용됩니다",
+                    qrWechat:"위챗 QR 코드 배치", qrAlipay:"알리페이 QR 코드 배치", wechat:"위챗 페이", alipay:"알리페이", btnThanks:"후원 감사합니다!",
+                    umbrellaDesc:"유휴 우산을 공유 바구니에 기부하여 사랑을 전하세요",
+                    step1Title:"📦 우산 준비",step1Desc:"집에서 유휴 우산을 찾으세요.",
+                    step2Title:"📝 라벨 부착",step2Desc:'손잡이에 "공유 우산" 라벨을 붙여주세요.',
+                    step3Title:"🧺 바구니에 넣기",step3Desc:"소프트웨어 파크 공유 바구니에 넣기만 하면 됩니다.",
+                    donateLocTitle:"기부 장소",donateLocDetail:"푸저우 소프트웨어 파크 · 공유 우산 바구니",donateLocNote:"(현장 표지판 확인 또는 관리실 문의)",
+                    btnDonate:"우산 기부하겠습니다!", footer1:"in Fuzhou Software Park", footer2:"비 오는 날 당황하지 마세요 · 더 따뜻한 도시",
+                    thanksDonate:["후원 감사합니다! ☔","감사합니다! 🌧️","마음 받았습니다! 💙"],
+                    thanksUmbrella:["우산 기부 감사합니다! ☂️","선행에 감사드립니다! 💚","의미를 더해주셨습니다! 🌈"]
+                }
+            };
+            let currentLang = 'zh';
+            window.switchLang = function(lang) {
+                currentLang = lang;
+                document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.lang === lang));
+                document.querySelectorAll('[data-i18n]').forEach(el => {
+                    const key = el.dataset.i18n;
+                    if (i18n[lang][key]) {
+                        if (key === 'description') el.innerHTML = i18n[lang][key];
+                        else el.textContent = i18n[lang][key];
+                    }
+                });
+            };
+            window.switchTab = function(tab, btn) {
+                document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.support-content').forEach(c=>c.classList.remove('active'));
+                document.getElementById(tab).classList.add('active');
+            };
 
-        function switchLang(lang) {
-            currentLang = lang;
-            document.querySelectorAll('.lang-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.lang === lang);
-            });
+            // ---------- 分形闪电系统 (canvas绘制⚡) ----------
+            const canvas = document.getElementById('rainCanvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
             
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.dataset.i18n;
-                if (i18n[lang][key]) {
-                    if (key === 'description' || key === 'donateLocNote') {
-                        el.innerHTML = i18n[lang][key];
-                    } else {
-                        el.textContent = i18n[lang][key];
+            // 雨滴数据
+            let raindrops = [];
+            let cardWaterDrops = [];
+            
+            // 闪电数据数组 (每条闪电包含路径点、透明度、生命)
+            let lightningBolts = [];
+            
+            const flashDiv = document.getElementById('lightningFlash');
+
+            function resizeCanvas() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            // ----- 生成分形闪电 (Z字形) -----
+            function generateLightningPoints(startX, startY, endX, endY, displacement = 60, branches = true) {
+                let points = [{x: startX, y: startY}];
+                
+                function midPoint(p1, p2, offset) {
+                    let mx = (p1.x + p2.x) / 2;
+                    let my = (p1.y + p2.y) / 2;
+                    let dx = p2.x - p1.x;
+                    let dy = p2.y - p1.y;
+                    let perpX = -dy;
+                    let perpY = dx;
+                    let len = Math.sqrt(perpX*perpX + perpY*perpY) || 1;
+                    perpX /= len; perpY /= len;
+                    let offsetAmount = (Math.random() - 0.5) * offset;
+                    return { x: mx + perpX * offsetAmount, y: my + perpY * offsetAmount };
+                }
+                
+                function subdivide(p1, p2, iter, maxIter = 4) {
+                    if (iter >= maxIter) return [];
+                    let mid = midPoint(p1, p2, displacement * Math.pow(0.65, iter));
+                    let pts = [];
+                    let left = subdivide(p1, mid, iter+1, maxIter);
+                    let right = subdivide(mid, p2, iter+1, maxIter);
+                    return [...left, mid, ...right];
+                }
+                
+                let start = {x: startX, y: startY};
+                let end = {x: endX, y: endY};
+                let subdivisions = subdivide(start, end, 0, 5);
+                
+                // 按Y排序 (从上到下)
+                let allPoints = [start, ...subdivisions, end];
+                allPoints.sort((a,b) => a.y - b.y);
+                
+                // 添加一些分支 (小叉)
+                if (branches) {
+                    let branchPoints = [];
+                    for (let i = 1; i < allPoints.length-1; i+=2) {
+                        if (Math.random() > 0.6) {
+                            let p = allPoints[i];
+                            let angle = (Math.random() - 0.5) * 0.8;
+                            let len = 30 + Math.random() * 40;
+                            let dx = Math.sin(angle) * len;
+                            let dy = Math.cos(angle) * len * 0.5;
+                            branchPoints.push({
+                                from: p,
+                                to: { x: p.x + dx, y: p.y + dy }
+                            });
+                        }
+                    }
+                    return { main: allPoints, branches: branchPoints };
+                }
+                return { main: allPoints, branches: [] };
+            }
+
+            // 触发新闪电 (打赏时调用 + 每3秒自动)
+            function triggerLightning() {
+                // 闪光层闪烁
+                flashDiv.style.transition = 'opacity 0.05s';
+                flashDiv.style.opacity = '0.9';
+                setTimeout(() => flashDiv.style.opacity = '0.3', 50);
+                setTimeout(() => flashDiv.style.opacity = '0.6', 120);
+                setTimeout(() => flashDiv.style.opacity = '0.1', 200);
+                setTimeout(() => flashDiv.style.opacity = '0', 350);
+                
+                // 生成一条主闪电 (从顶部随机位置到地面)
+                const startX = width * (0.2 + Math.random() * 0.6);
+                const startY = -20;
+                const endX = startX + (Math.random() - 0.5) * 180;
+                const endY = height * 0.85 + Math.random() * 80;
+                
+                const { main, branches } = generateLightningPoints(startX, startY, endX, endY, 70, true);
+                
+                // 添加到数组，生命周期1.0 -> 0
+                lightningBolts.push({
+                    main: main,
+                    branches: branches,
+                    alpha: 1.0,
+                    decay: 0.018 + Math.random() * 0.01,
+                    width: 4 + Math.random() * 3
+                });
+                
+                // 限制闪电数量
+                if (lightningBolts.length > 6) lightningBolts.shift();
+            }
+
+            // 每3秒自动闪电
+            setInterval(triggerLightning, 3000);
+
+            // 感谢弹窗 (打赏时触发闪电)
+            window.showThanks = function(type) {
+                const messages = i18n[currentLang][type==='donate'?'thanksDonate':'thanksUmbrella'];
+                const msg = messages[Math.floor(Math.random()*messages.length)];
+                const modal = document.createElement('div');
+                modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
+                modal.innerHTML = `<div style="background:white;padding:40px;border-radius:20px;text-align:center;max-width:400px;"><div style="font-size:4em;">${type==='donate'?'🙏':'☔'}</div><h3>${msg}</h3><button style="margin-top:20px;padding:10px 30px;border-radius:30px;border:none;background:#667eea;color:white;">${currentLang==='zh'?'关闭':'Close'}</button></div>`;
+                modal.addEventListener('click', e=>{ if(e.target===modal) modal.remove(); });
+                modal.querySelector('button').onclick = ()=>modal.remove();
+                document.body.appendChild(modal);
+                if(type === 'donate') {
+                    triggerLightning();  // 点击打赏，额外闪一次闪电
+                }
+            };
+
+            // ----- 雨滴 & 水流逻辑 -----
+            function getCardRect() {
+                const card = document.querySelector('.info-card');
+                if (!card) return null;
+                const rect = card.getBoundingClientRect();
+                return { x: rect.left, y: rect.top, w: rect.width, h: rect.height };
+            }
+
+            class Raindrop {
+                constructor() {
+                    this.reset();
+                }
+                reset() {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * -200 - 20;
+                    this.len = 12 + Math.random() * 18;
+                    this.speed = 8 + Math.random() * 10;
+                    this.thick = 1.2 + Math.random() * 1.5;
+                }
+                update() { this.y += this.speed; if (this.y > height + 50) this.reset(); }
+                draw() {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x - 1, this.y + this.len);
+                    ctx.strokeStyle = 'rgba(180, 220, 255, 0.7)';
+                    ctx.lineWidth = this.thick;
+                    ctx.stroke();
+                }
+            }
+
+            class CardFlowParticle {
+                constructor(x, y) {
+                    this.x = x; this.y = y;
+                    this.vx = 0; this.vy = 1.2 + Math.random() * 2.5;
+                    this.size = 3 + Math.random() * 5;
+                    this.life = 1.0;
+                    this.decay = 0.002 + Math.random()*0.005;
+                }
+                update(cardRect) {
+                    this.vy += 0.15;
+                    this.x += this.vx + (Math.random()-0.5)*0.8;
+                    this.y += this.vy;
+                    if (this.x < cardRect.x) this.x = cardRect.x;
+                    if (this.x > cardRect.x + cardRect.w) this.x = cardRect.x + cardRect.w;
+                    this.life -= this.decay;
+                    return this.y < cardRect.y + cardRect.h + 30 && this.life > 0.02;
+                }
+                draw(ctx) {
+                    ctx.beginPath();
+                    const gradient = ctx.createRadialGradient(this.x, this.y, 1, this.x+2, this.y+2, this.size);
+                    gradient.addColorStop(0, 'rgba(160, 210, 255, 0.9)');
+                    gradient.addColorStop(1, 'rgba(100, 180, 255, 0.5)');
+                    ctx.fillStyle = gradient;
+                    ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(this.x-1, this.y-1, this.size*0.3, 0, Math.PI*2);
+                    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                    ctx.fill();
+                }
+            }
+
+            function initRain(count = 130) {
+                raindrops = [];
+                for (let i=0; i<count; i++) raindrops.push(new Raindrop());
+            }
+            initRain(130);
+
+            // 绘制分形闪电
+            function drawLightning(bolt) {
+                const { main, branches, alpha, width: lineWidth } = bolt;
+                if (!main || main.length < 2) return;
+                
+                ctx.save();
+                ctx.shadowColor = '#a0d0ff';
+                ctx.shadowBlur = 18;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                // 主闪电 (亮白/淡蓝)
+                ctx.beginPath();
+                ctx.moveTo(main[0].x, main[0].y);
+                for (let i=1; i<main.length; i++) {
+                    ctx.lineTo(main[i].x, main[i].y);
+                }
+                ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.lineWidth = lineWidth * 1.8;
+                ctx.stroke();
+                
+                // 内层更亮
+                ctx.beginPath();
+                ctx.moveTo(main[0].x, main[0].y);
+                for (let i=1; i<main.length; i++) {
+                    ctx.lineTo(main[i].x, main[i].y);
+                }
+                ctx.strokeStyle = `rgba(220, 240, 255, ${alpha*1.2})`;
+                ctx.lineWidth = lineWidth * 0.9;
+                ctx.stroke();
+                
+                // 分支
+                branches.forEach(br => {
+                    ctx.beginPath();
+                    ctx.moveTo(br.from.x, br.from.y);
+                    ctx.lineTo(br.to.x, br.to.y);
+                    ctx.strokeStyle = `rgba(200, 230, 255, ${alpha*0.8})`;
+                    ctx.lineWidth = lineWidth * 0.7;
+                    ctx.stroke();
+                });
+                
+                ctx.shadowBlur = 0;
+                ctx.restore();
+            }
+
+            // 动画循环
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+                const cardRect = getCardRect();
+                
+                // 1. 更新&绘制雨滴
+                for (let d of raindrops) {
+                    d.update();
+                    d.draw();
+                    
+                    if (cardRect) {
+                        const tipX = d.x, tipY = d.y + d.len;
+                        if (tipX >= cardRect.x && tipX <= cardRect.x + cardRect.w &&
+                            tipY >= cardRect.y && tipY <= cardRect.y + cardRect.h) {
+                            const count = Math.floor(Math.random() * 3) + 2;
+                            for (let i=0; i<count; i++) {
+                                const px = tipX + (Math.random()-0.5)*12;
+                                const py = cardRect.y + Math.random() * 8;
+                                cardWaterDrops.push(new CardFlowParticle(px, py));
+                            }
+                            d.reset();
+                        }
                     }
                 }
-            });
-        }
 
-        function switchTab(tabName, btn) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            document.querySelectorAll('.support-content').forEach(c => c.classList.remove('active'));
-            document.getElementById(tabName).classList.add('active');
-        }
+                // 2. 卡片水流聚集+成股流下
+                if (cardRect) {
+                    ctx.fillStyle = 'rgba(120, 180, 255, 0.06)';
+                    ctx.fillRect(cardRect.x, cardRect.y, cardRect.w, cardRect.h);
+                    
+                    // 水流线条
+                    ctx.lineWidth = 2.5;
+                    for (let i=0; i<6; i++) {
+                        const offset = (i * 30 + Date.now()*0.02) % 60;
+                        ctx.beginPath();
+                        ctx.moveTo(cardRect.x + 20 + i*35, cardRect.y + 5);
+                        ctx.lineTo(cardRect.x + 10 + i*38, cardRect.y + cardRect.h - 8);
+                        ctx.strokeStyle = 'rgba(100, 170, 250, 0.25)';
+                        ctx.stroke();
+                    }
+                    
+                    for (let i=cardWaterDrops.length-1; i>=0; i--) {
+                        const p = cardWaterDrops[i];
+                        if (p.update(cardRect)) {
+                            p.draw(ctx);
+                            if (p.y > cardRect.y + cardRect.h - 10 && p.life > 0.3) {
+                                ctx.beginPath();
+                                ctx.moveTo(p.x-4, cardRect.y+cardRect.h);
+                                ctx.lineTo(p.x, cardRect.y+cardRect.h+12);
+                                ctx.lineTo(p.x+4, cardRect.y+cardRect.h);
+                                ctx.fillStyle = 'rgba(90,170,250,0.3)';
+                                ctx.fill();
+                            }
+                        } else {
+                            cardWaterDrops.splice(i,1);
+                        }
+                    }
+                    
+                    ctx.shadowColor = '#a0d0ff';
+                    ctx.shadowBlur = 12;
+                    ctx.beginPath();
+                    ctx.moveTo(cardRect.x + 15, cardRect.y + cardRect.h);
+                    ctx.lineTo(cardRect.x + 30, cardRect.y + cardRect.h + 25);
+                    ctx.lineTo(cardRect.x + cardRect.w - 30, cardRect.y + cardRect.h + 25);
+                    ctx.lineTo(cardRect.x + cardRect.w - 15, cardRect.y + cardRect.h);
+                    ctx.fillStyle = 'rgba(80, 160, 255, 0.15)';
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
 
-        function showThanks(type) {
-            const messages = i18n[currentLang][type === 'donate' ? 'thanksDonate' : 'thanksUmbrella'];
-            const randomMsg = messages[Math.floor(Math.random() * messages.length)];
-            
-            const modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
-            modal.innerHTML = `
-                <div style="background:white;padding:40px;border-radius:20px;text-align:center;max-width:400px;margin:20px;">
-                    <div style="font-size:4em;margin-bottom:20px;">${type === 'donate' ? '🙏' : '☔'}</div>
-                    <h3 style="color:#333;margin-bottom:15px;font-size:1.5em;">${randomMsg}</h3>
-                    <p style="color:#666;margin-bottom:25px;">${currentLang === 'zh' ? '您的每一份支持都是这个项目继续的动力' : currentLang === 'en' ? 'Your support keeps this project going' : '당신의 지원이 이 프로젝트를 계속하게 합니다'}</p>
-                    <button onclick="this.closest('.modal').remove()" style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;padding:12px 30px;border-radius:25px;cursor:pointer;">${currentLang === 'zh' ? '关闭' : currentLang === 'en' ? 'Close' : '닫기'}</button>
-                </div>
-            `;
-            modal.className = 'modal';
-            modal.addEventListener('click', e => { if(e.target === modal) modal.remove(); });
-            document.body.appendChild(modal);
-        }
+                // 3. 绘制分形闪电 (在雨滴上层)
+                for (let i=lightningBolts.length-1; i>=0; i--) {
+                    const bolt = lightningBolts[i];
+                    bolt.alpha -= bolt.decay;
+                    if (bolt.alpha <= 0.02) {
+                        lightningBolts.splice(i,1);
+                        continue;
+                    }
+                    drawLightning(bolt);
+                }
 
-        function createRain() {
-            const container = document.getElementById('rainContainer');
-            for (let i = 0; i < 50; i++) {
-                const drop = document.createElement('div');
-                drop.className = 'raindrop';
-                drop.style.left = Math.random() * 100 + '%';
-                drop.style.animationDuration = (Math.random() + 0.5) + 's';
-                drop.style.animationDelay = Math.random() * 2 + 's';
-                drop.style.opacity = Math.random() * 0.5 + 0.2;
-                container.appendChild(drop);
+                requestAnimationFrame(animate);
             }
-        }
+            animate();
 
-        createRain();
+            // 启动语言
+            switchLang('zh');
+        })();
     </script>
 </body>
 </html>
