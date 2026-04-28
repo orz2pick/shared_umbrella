@@ -155,6 +155,49 @@
             filter: drop-shadow(0 8px 20px rgba(0,0,0,0.4));
         }
 
+        /* ----- 开场动画层 ----- */
+        #introOverlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 3000;
+            background: radial-gradient(circle at 30% 20%, #1e3a5f, #0a1a2a);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        #introOverlay.hidden {
+            display: none;
+        }
+        .intro-logo {
+            width: 120px; height: 120px;
+            margin-bottom: 30px;
+            filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3));
+            transition: transform 2s ease-in-out;
+            transform: translateY(0);
+        }
+        .intro-text-row {
+            display: flex;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #ffecb3;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.4);
+            white-space: nowrap;
+            gap: 12px;
+        }
+        .intro-text-left, .intro-text-right {
+            display: inline-block;
+            transition: transform 2s ease-in-out;
+        }
+        .intro-text-left.moved { transform: translateX(-120vw); }
+        .intro-text-right.moved { transform: translateX(120vw); }
+        .intro-logo.moved { transform: translateY(calc(50vh - 60px + 30px)); }
+        @media (max-width: 600px) {
+            .intro-text-row { font-size: 1.8rem; }
+        }
+
         /* 原共享页面样式保持 */
         .container {
             position: relative;
@@ -276,6 +319,20 @@
     </style>
 </head>
 <body>
+
+<!-- 开场动画层 -->
+<div id="introOverlay">
+    <svg class="intro-logo" viewBox="0 0 100 100" fill="none">
+        <path d="M50 15 C30 15 15 30 12 45 C12 45 20 40 30 40 C40 40 45 45 50 45 C55 45 60 40 70 40 C80 40 88 45 88 45 C85 30 70 15 50 15 Z" fill="#FFD93D" stroke="#FFA500" stroke-width="2"/>
+        <path d="M50 45 L50 75" stroke="#666" stroke-width="4" stroke-linecap="round"/>
+        <path d="M50 75 C50 85 45 90 40 90" stroke="#666" stroke-width="4" stroke-linecap="round" fill="none"/>
+        <ellipse cx="50" cy="15" rx="38" ry="8" fill="#FFE66D" opacity="0.5"/>
+    </svg>
+    <div class="intro-text-row">
+        <span class="intro-text-left">福州免费</span>
+        <span class="intro-text-right">爱心雨伞</span>
+    </div>
+</div>
 
 <!-- 游戏层 -->
 <div id="gameFullContainer">
@@ -406,58 +463,59 @@
             }
         }
 
-        // 新伞绘制: 与svg风格一致 (黄色伞面+棕色弯钩)
+        // 新伞绘制: 与svg风格完全一致 (扁平黄色伞面+灰色弯钩)
         function drawUmbrella(){
             ctx.save();
             ctx.shadowBlur = 8;
             ctx.shadowColor = "rgba(0,0,0,0.4)";
             ctx.translate(umbrellaX, UMB_Y);
             ctx.rotate(umbrellaTilt);
-            // 主伞面 (椭圆状, 亮黄)
+
+            const S = 1.25;
+            // SVG viewBox 100x100, 以伞面底部中心 (50,45) 为原点映射到 canvas (0,-6)
+            const sx = (x) => (x - 50) * S;
+            const sy = (y) => (y - 45) * S - 6;
+
+            // 主伞面路径 (与 SVG 完全相同)
             ctx.beginPath();
-            ctx.ellipse(0, -6, 48, 34, 0, 0, Math.PI*2);
+            ctx.moveTo(sx(50), sy(15));
+            ctx.bezierCurveTo(sx(30), sy(15), sx(15), sy(30), sx(12), sy(45));
+            ctx.bezierCurveTo(sx(12), sy(45), sx(20), sy(40), sx(30), sy(40));
+            ctx.bezierCurveTo(sx(40), sy(40), sx(45), sy(45), sx(50), sy(45));
+            ctx.bezierCurveTo(sx(55), sy(45), sx(60), sy(40), sx(70), sy(40));
+            ctx.bezierCurveTo(sx(80), sy(40), sx(88), sy(45), sx(88), sy(45));
+            ctx.bezierCurveTo(sx(85), sy(30), sx(70), sy(15), sx(50), sy(15));
+            ctx.closePath();
             ctx.fillStyle = "#FFD93D";
             ctx.fill();
             ctx.strokeStyle = "#FFA500";
-            ctx.lineWidth = 2.2;
+            ctx.lineWidth = 2 * S;
             ctx.stroke();
-            // 高光渐变
-            let grad = ctx.createLinearGradient(-15, -15, 20, 5);
-            grad.addColorStop(0, '#FFF2A0');
-            grad.addColorStop(0.7, '#FFC107');
-            ctx.fillStyle = grad;
+
+            // 顶部高光椭圆
+            ctx.beginPath();
+            ctx.ellipse(sx(50), sy(15), 38 * S, 8 * S, 0, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(255, 230, 109, 0.5)";
             ctx.fill();
-            // 伞骨纹路
+
+            // 伞柄直线
             ctx.beginPath();
-            ctx.strokeStyle = "#D98F00";
-            ctx.lineWidth = 1.5;
-            for(let ang = -0.8; ang <= 0.81; ang+=0.6){
-                let dx = Math.sin(ang) * 42;
-                let dy = Math.cos(ang)* 12 - 6;
-                ctx.beginPath();
-                ctx.moveTo(0, -6);
-                ctx.lineTo(dx, dy-2);
-                ctx.stroke();
-            }
-            // 伞柄 (木质弯钩)
-            ctx.beginPath();
-            ctx.moveTo(12, 10);
-            ctx.quadraticCurveTo(20, 28, 8, 42);
-            ctx.lineTo(2, 41);
-            ctx.quadraticCurveTo(12, 28, 6, 14);
-            ctx.fillStyle = "#B97F44";
-            ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(12, 10);
-            ctx.lineTo(18, 16);
-            ctx.lineTo(7, 22);
-            ctx.fillStyle = "#CF9A60";
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(8, 42, 5, 0.2, Math.PI*0.6);
-            ctx.lineWidth = 2.5;
-            ctx.strokeStyle = "#E6B656";
+            ctx.moveTo(sx(50), sy(45));
+            ctx.lineTo(sx(50), sy(75));
+            ctx.strokeStyle = "#666";
+            ctx.lineWidth = 4 * S;
+            ctx.lineCap = "round";
             ctx.stroke();
+
+            // 弯钩
+            ctx.beginPath();
+            ctx.moveTo(sx(50), sy(75));
+            ctx.bezierCurveTo(sx(50), sy(85), sx(45), sy(90), sx(40), sy(90));
+            ctx.strokeStyle = "#666";
+            ctx.lineWidth = 4 * S;
+            ctx.lineCap = "round";
+            ctx.stroke();
+
             ctx.restore();
         }
 
@@ -540,7 +598,7 @@
             lastFrameTimeGame = performance.now();
         }
 
-        // 游戏结束过渡 + 飞伞动画 + 显示共享页面
+        // 游戏结束过渡 + 显示共享页面
         let transitionLock = false;
         function endGameAndTransition(isVictory){
             if(transitionLock) return;
@@ -551,42 +609,40 @@
             ctx.fillStyle = isVictory ? "#FFF7C0" : "#FFC0A0";
             ctx.shadowBlur = 0;
             ctx.fillText(isVictory ? "🎉 胜利！天晴了 🎉" : "💧 雨滴落地... 游戏结束", W/2-180, H/2-40);
-            // 1.5秒后飞伞动画
+            // 1.5秒后切换到主页面
             setTimeout(() => {
-                // 获取游戏伞最后位置 (canvas相对页面偏移)
-                const rect = canvas.getBoundingClientRect();
-                const startX = rect.left + umbrellaX * (rect.width / W);
-                const startY = rect.top + UMB_Y * (rect.height / H);
-                // 目标SVG伞位置
+                const mainApp = document.getElementById('mainApp');
+                const gameContainer = document.getElementById('gameFullContainer');
                 const targetIcon = document.querySelector('#mainApp .umbrella-icon');
-                const targetRect = targetIcon.getBoundingClientRect();
-                const endX = targetRect.left + targetRect.width/2;
-                const endY = targetRect.top + targetRect.height/2;
-                // 创建飞行元素
-                const flyer = document.createElement('div');
-                flyer.className = 'flying-umbrella';
-                flyer.innerHTML = `<svg width="60" height="60" viewBox="0 0 100 100"><path d="M50 15 C30 15 15 30 12 45 C12 45 20 40 30 40 C40 40 45 45 50 45 C55 45 60 40 70 40 C80 40 88 45 88 45 C85 30 70 15 50 15 Z" fill="#FFD93D" stroke="#FFA500" stroke-width="2"/><path d="M50 45 L50 75" stroke="#666" stroke-width="4"/><path d="M50 75 C50 85 45 90 40 90" stroke="#666" stroke-width="4" fill="none"/><ellipse cx="50" cy="15" rx="38" ry="8" fill="#FFE66D" opacity="0.5"/></svg>`;
-                flyer.style.left = startX - 30 + 'px';
-                flyer.style.top = startY - 30 + 'px';
-                flyer.style.width = '60px';
-                flyer.style.height = '60px';
-                flyer.style.transform = 'rotate(10deg)';
-                document.body.appendChild(flyer);
+
+                gameContainer.style.display = 'none';
+                mainApp.style.display = 'block';
+                if(window.startOriginalEffects) window.startOriginalEffects(true);
+
+                // 先让主页其他内容不可见
+                const container = mainApp.querySelector('.container');
+                container.style.opacity = '0';
+                container.style.transition = 'opacity 0.8s ease';
+
+                // 禁用 float 动画，定位到下方
+                targetIcon.style.animation = 'none';
+                targetIcon.style.transition = 'transform 2s ease-in-out';
+                targetIcon.style.transform = 'translateY(110vh)';
+
+                // 下一帧启动上移动画
                 requestAnimationFrame(() => {
-                    flyer.style.transition = 'all 0.65s cubic-bezier(0.2, 0.9, 0.4, 1.2)';
-                    flyer.style.left = endX - 30 + 'px';
-                    flyer.style.top = endY - 45 + 'px';
-                    flyer.style.transform = 'rotate(0deg) scale(0.8)';
-                    flyer.style.opacity = '0.8';
+                    requestAnimationFrame(() => {
+                        targetIcon.style.transform = 'translateY(0)';
+                    });
                 });
+
+                // 2秒后恢复 float 并淡入内容
                 setTimeout(() => {
-                    flyer.remove();
-                    // 隐藏游戏容器，显示共享雨伞页面
-                    document.getElementById('gameFullContainer').style.display = 'none';
-                    document.getElementById('mainApp').style.display = 'block';
-                    // 启动共享页闪电、雨特效的原动画 (之前可能未启动)
-                    if(window.startOriginalEffects) window.startOriginalEffects(true);
-                }, 700);
+                    targetIcon.style.transition = '';
+                    targetIcon.style.transform = '';
+                    targetIcon.style.animation = 'float 3s ease-in-out infinite';
+                    container.style.opacity = '1';
+                }, 2000);
             }, 1500);
         }
 
@@ -635,8 +691,7 @@
                 ctx.fillText(gameWin ? "天晴啦!" : "雨滴落地", W/2-80, H/2);
             }
         }
-        document.getElementById('restartGameBtn').addEventListener('click', ()=>{
-            if(transitionLock) return;
+        function startGame(){
             resetGameLogic();
             document.getElementById('gameFullContainer').style.display = 'flex';
             document.getElementById('mainApp').style.display = 'none';
@@ -644,12 +699,33 @@
             running = true;
             gameWin = false;
             lastFrameTimeGame = performance.now();
+            if(gameAnimId) cancelAnimationFrame(gameAnimId);
+            gameAnimId = requestAnimationFrame(gameLoop);
+        }
+
+        document.getElementById('restartGameBtn').addEventListener('click', ()=>{
+            if(transitionLock) return;
+            startGame();
         });
-        resetGameLogic();
-        gameAnimId = requestAnimationFrame(gameLoop);
+
         // 预隐藏主应用
         document.getElementById('mainApp').style.display = 'none';
         window.endGameAndTransition = endGameAndTransition;
+
+        // 开场动画
+        setTimeout(() => {
+            const introOverlay = document.getElementById('introOverlay');
+            const logo = introOverlay.querySelector('.intro-logo');
+            const leftText = introOverlay.querySelector('.intro-text-left');
+            const rightText = introOverlay.querySelector('.intro-text-right');
+            logo.classList.add('moved');
+            leftText.classList.add('moved');
+            rightText.classList.add('moved');
+            setTimeout(() => {
+                introOverlay.classList.add('hidden');
+                startGame();
+            }, 2000);
+        }, 100);
 
         // ------------------- 原共享页面效果 (闪电 +雨滴装饰, 仅当游戏结束后显示且特效激活) -------------------
         let originalEffectsActive = false;
